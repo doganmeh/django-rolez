@@ -37,11 +37,11 @@ class RoleTests(ModelTestCase):
 		self.assertIsNotNone(role.delegate)
 
 		ctype = ContentType.objects.get_for_model(role)  # takes obj or model
-		delegate = Permission.objects.filter(content_type=ctype, codename=role.code_name())
+		delegate = Permission.objects.filter(content_type=ctype, codename=role.codename())
 		self.assertEqual(list(delegate).__len__(), 1)  # delegate created
 
 		role.delete()
-		delegate = Permission.objects.filter(content_type=ctype, codename=role.code_name())
+		delegate = Permission.objects.filter(content_type=ctype, codename=role.codename())
 		self.assertEqual(list(delegate).__len__(), 0)  # delegate also deleted
 
 	def test_create_duplicate_role(self):

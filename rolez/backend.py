@@ -9,25 +9,20 @@ class RolePermissionBackend(object):
 	def clear_cache(self, user):
 		if hasattr(user, '_role_perm_cache'): del user._role_perm_cache
 		if hasattr(user, '_user_role_perm_cache'): del user._user_role_perm_cache
-		if hasattr(user, '_group_role_perm_cache'): del user._group_role_perm_cache  # used for user's groups if checker is for a user
+		if hasattr(user, '_group_role_perm_cache'): del user._group_role_perm_cache
+			# used for user's groups if checker is for a user
 
 	def authenticate(self, username, password):
 		return None
 
 	def _get_user_permissions(self, user_obj):
-		delegate_perms = user_obj.user_permissions.filter(role__isnull=False)
-		roles = Role.objects.filter(delegate__in=delegate_perms)
-		return Permission.objects.filter(roles__in=roles)
+		return Permission.objects.filter(roles__delegate__in=user_obj.user_permissions.all())
 
 	def _get_group_permissions(self, user_obj):
 		user_groups_field = get_user_model()._meta.get_field('groups')
-		filters = {
-			'group__' + user_groups_field.related_query_name(): user_obj,
-			'role__isnull': False,
-			}
-		delegate_perms = Permission.objects.filter(**filters)
-		roles = Role.objects.filter(delegate__in=delegate_perms)
-		return Permission.objects.filter(roles__in=roles)
+		group_perms = Permission.objects.filter(
+			**{'group__' + user_groups_field.related_query_name(): user_obj})
+		return Permission.objects.filter(roles__delegate__in=group_perms)
 
 	def _get_permissions(self, user_obj, obj, from_name):
 		if not user_obj.is_active or user_obj.is_anonymous or obj is not None:

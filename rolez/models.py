@@ -15,11 +15,12 @@ class Role(models.Model):
 			},
 		)
 	delegate = models.OneToOneField(Permission, on_delete=models.CASCADE,
-									related_name='delegate_of')
-	perms = models.ManyToManyField(Permission, related_name='in_roles')
+									related_name='role')
+	perms = models.ManyToManyField(Permission, related_name='roles')
 
 	def codename(self):
-		return 'use_role_' + re.sub(r'([^\s\w]|_)+', '', self.name).replace(' ', '_')
+		return 'use_role_' + re.sub(r'([^\s\w]|_)+', '', self.name).replace(' ', '_') \
+			.lower()
 
 	def save(self, **kwargs):
 		if not hasattr(self, 'delegate'):

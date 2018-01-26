@@ -4,7 +4,7 @@ from django.test import TestCase as ModelTestCase  # use when querying models
 from unittest import TestCase as NonModelTestCase  # use otherwise
 from tests.test_app.models import Author, Blog
 from rolez.models import Role
-from rolez.backend import RolePermissionBackend
+from rolez.backend import RoleModelBackend, RoleModelObjectBackend
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.auth import get_user_model
 
@@ -19,7 +19,7 @@ UserModel = get_user_model()
 # testing views: https://docs.djangoproject.com/en/dev/intro/tutorial05/#the-django-test-client
 
 
-class RoleTests(ModelTestCase):
+class TestsCommon(object):
 	def setUp(self):
 		self.brandon = UserModel.objects.create(username='brandon')
 		self.jack = UserModel.objects.create(username='jack')
@@ -45,8 +45,6 @@ class RoleTests(ModelTestCase):
 		self.admin_role.perms.add(self.add_author, self.delete_author)
 		self.editor_role.perms.add(self.change_blog)
 		self.author_role.perms.add(self.change_blog, self.add_blog)
-
-		self.backend = RolePermissionBackend()
 
 	def test_create_delete_role(self):
 		role = Role.objects.create (name="Maintenance")
@@ -131,4 +129,14 @@ class RoleTests(ModelTestCase):
 						 {'test_app.add_author', 'test_app.delete_author',
 							 'test_app.add_blog', 'test_app.change_blog'})
 
+
+class RoleModelBackendTests(TestsCommon, ModelTestCase):
+	def setUp(self):
+		super().setUp()
+		self.backend = RoleModelBackend()
+
+class RoleModelObjectBackendTests(TestsCommon, ModelTestCase):
+	def setUp(self):
+		super().setUp()
+		self.backend = RoleModelObjectBackend()
 

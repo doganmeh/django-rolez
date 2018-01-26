@@ -23,7 +23,7 @@ DATABASES = {
 
 AUTHENTICATION_BACKENDS = (
     'django.contrib.auth.backends.ModelBackend',
-    'rolez.backend.RolePermissionBackend',
+    'rolez.backend.RoleModelBackend',
 )
 
 # ROOT_URLCONF = 'rolez.urls'

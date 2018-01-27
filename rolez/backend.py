@@ -10,7 +10,12 @@ class RoleModelBackend(object):
 		if hasattr(user, '_role_perm_cache'): del user._role_perm_cache
 		if hasattr(user, '_user_role_perm_cache'): del user._user_role_perm_cache
 		if hasattr(user, '_group_role_perm_cache'): del user._group_role_perm_cache
-			# used for user's groups if checker is for a user
+
+		# and django cache for convenience here
+		if hasattr(user, '_group_perm_cache'): del user._group_perm_cache
+		if hasattr(user, '_user_perm_cache'): del user._user_perm_cache
+		if hasattr(user, '_perm_cache'): del user._perm_cache
+
 
 	def authenticate(self, username, password):
 		return None
@@ -68,7 +73,10 @@ class RoleModelBackend(object):
 
 class RoleModelObjectBackend(object):
 	def clear_cache(self, user):
-		pass
+		# and django cache for convenience here
+		if hasattr(user, '_group_perm_cache'): del user._group_perm_cache
+		if hasattr(user, '_user_perm_cache'): del user._user_perm_cache
+		if hasattr(user, '_perm_cache'): del user._perm_cache
 
 	def authenticate(self, username, password):
 		return None

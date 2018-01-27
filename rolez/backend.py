@@ -81,14 +81,14 @@ class RoleModelObjectBackend(object):
 	def authenticate(self, username, password):
 		return None
 
-	def get_user_permissions(self, user_obj, obj=None):
-		pass
-
-	def get_group_permissions(self, user_obj, obj=None):
-		pass
-
-	def get_all_permissions(self, user_obj, obj=None):
-		pass
+# 	def get_user_permissions(self, user_obj, obj=None):
+# 		pass
+#
+# 	def get_group_permissions(self, user_obj, obj=None):
+# 		pass
+#
+# 	def get_all_permissions(self, user_obj, obj=None):
+# 		pass
 
 	def has_perm(self, user_obj, perm, obj=None):
 		perm = get_perm_from_str(perm)
@@ -105,5 +105,5 @@ class RoleModelObjectBackend(object):
 				return True
 		return False
 
-	def has_module_perms(self, user_obj, app_label):
-		pass
+# 	def has_module_perms(self, user_obj, app_label):
+# 		pass

@@ -1,6 +1,6 @@
 from django.contrib.auth.models import Permission, Group
 from django.db import IntegrityError
-from django.test import TestCase as ModelTestCase  # use when querying models
+from django.test import TestCase as ModelTestCase, override_settings  # use when querying models
 from unittest import TestCase as NonModelTestCase  # use otherwise
 from tests.test_app.models import Author, Blog
 from rolez.models import Role
@@ -18,41 +18,20 @@ UserModel = get_user_model()
 
 # testing views: https://docs.djangoproject.com/en/dev/intro/tutorial05/#the-django-test-client
 
-
-class TestsCommon(object):
-	def setUp(self):
-		self.brandon = UserModel.objects.create(username='brandon')
-		self.jack = UserModel.objects.create(username='jack')
-
-		self.admins_group = Group.objects.create(name='admins')
-		self.users_group = Group.objects.create(name='users')
-
-		self.admin_role = Role.objects.create(name='admin')   # author add, change, delete
-		self.editor_role = Role.objects.create(name='editor') # blog change
-		self.author_role = Role.objects.create(name='author') # blog change, add
-
-		self.jack.groups.add(self.users_group)
-		self.brandon.groups.add(self.admins_group)
-
-		content_type = ContentType.objects.get_for_model(Author)
-		self.add_author = Permission.objects.get(content_type=content_type, codename='add_author')
-		self.delete_author = Permission.objects.get(content_type=content_type, codename='delete_author')
-
-		content_type = ContentType.objects.get_for_model(Blog)
-		self.change_blog = Permission.objects.get(content_type=content_type, codename='change_blog')
-		self.add_blog = Permission.objects.get(content_type=content_type, codename='add_blog')
-
-		self.admin_role.perms.add(self.add_author, self.delete_author)
-		self.editor_role.perms.add(self.change_blog)
-		self.author_role.perms.add(self.change_blog, self.add_blog)
-
+@override_settings(
+    AUTHENTICATION_BACKENDS=[
+		  'django.contrib.auth.backends.ModelBackend',
+		  'rolez.backend.RoleModelBackend',
+		  ],
+)
+class ModelTests(ModelTestCase):
 	def test_create_delete_role(self):
 		role = Role.objects.create (name="Maintenance")
 		self.assertIsNotNone(role.delegate)
 
 		ctype = ContentType.objects.get_for_model(role)  # takes obj or model
 		delegate = Permission.objects.filter(content_type=ctype, codename=role.codename())
-		self.assertEqual(list(delegate).__len__(), 1)  # delegate created
+		self.assertEqual(list(delegate).__len__(), 1)  # delegate perm is created
 
 		role.delete()
 		delegate = Permission.objects.filter(content_type=ctype, codename=role.codename())
@@ -65,8 +44,35 @@ class TestsCommon(object):
 		with self.assertRaises(IntegrityError):
 			role.save()
 
-	def test_user_regular_perm(self):
-		self.assertIs(self.backend.has_perm(self.brandon, 'test_app.add_author'), False)
+
+class BackendTestsCommon(object):
+	def setUp(self):
+		self.brandon = UserModel.objects.create(username='brandon')
+		self.jack = UserModel.objects.create(username='jack')
+
+		self.admins_group = Group.objects.create(name='admins')
+		self.users_group = Group.objects.create(name='users')
+
+		self.manager_role = Role.objects.create(name='manager')  # author add, change, delete
+		self.editor_role = Role.objects.create(name='editor')  # blog change
+		self.author_role = Role.objects.create(name='author')  # blog change, add
+
+		self.jack.groups.add(self.users_group)
+		self.brandon.groups.add(self.admins_group)
+
+		content_type = ContentType.objects.get_for_model(Author)
+		self.add_author = Permission.objects.get(content_type=content_type, codename='add_author')
+		self.delete_author = Permission.objects.get(content_type=content_type, codename='delete_author')
+
+		content_type = ContentType.objects.get_for_model(Blog)
+		self.change_blog = Permission.objects.get(content_type=content_type, codename='change_blog')
+		self.add_blog = Permission.objects.get(content_type=content_type, codename='add_blog')
+
+		self.manager_role.perms.add(self.add_author, self.delete_author)
+		self.editor_role.perms.add(self.change_blog)
+		self.author_role.perms.add(self.change_blog, self.add_blog)
+
+	def test_user_deny_non_role_perm(self):
 		self.assertIs(self.backend.has_perm(self.brandon, 'test_app.add_author'), False)
 
 		# will approve perms in roles only
@@ -83,7 +89,7 @@ class TestsCommon(object):
 		self.assertIs(self.backend.has_perm(self.brandon, 'test_app.add_author'), True)
 		self.assertIs(self.backend.has_perm(self.jack, 'test_app.add_author'), False)
 
-	def test_group_regular_perm(self):
+	def test_group_deny_non_role_perm(self):
 		self.assertEqual(self.jack.groups.all().__len__(), 1)
 		self.assertEqual(self.brandon.groups.all().__len__(), 1)
 
@@ -107,10 +113,22 @@ class TestsCommon(object):
 		self.assertIs(self.brandon.has_perm('rolez.use_role_editor'), False)
 		self.assertIs(self.backend.has_perm(self.brandon, 'test_app.change_blog'), False)
 
+
+@override_settings(
+    AUTHENTICATION_BACKENDS=[
+		  'django.contrib.auth.backends.ModelBackend',
+		  'rolez.backend.RoleModelBackend',
+		  ],
+)
+class RoleModelBackendTests(BackendTestsCommon, ModelTestCase):
+	def setUp(self):
+		super().setUp()
+		self.backend = RoleModelBackend()
+
 	def test_get_all_permissions(self):
 		self.assertEqual(self.backend.get_all_permissions(self.brandon), set())
 
-		self.admins_group.permissions.add(self.admin_role.delegate) # all admins have admin role
+		self.admins_group.permissions.add(self.manager_role.delegate) # all admins have manager role
 		self.backend.clear_cache(self.brandon)
 		self.assertEqual(self.backend.get_all_permissions(self.brandon),
 						 {'test_app.add_author', 'test_app.delete_author'})
@@ -130,12 +148,13 @@ class TestsCommon(object):
 							 'test_app.add_blog', 'test_app.change_blog'})
 
 
-class RoleModelBackendTests(TestsCommon, ModelTestCase):
-	def setUp(self):
-		super().setUp()
-		self.backend = RoleModelBackend()
-
-class RoleModelObjectBackendTests(TestsCommon, ModelTestCase):
+@override_settings(
+    AUTHENTICATION_BACKENDS=[
+		  'django.contrib.auth.backends.ModelBackend',
+		  'rolez.backend.RoleModelObjectBackend',
+		  ],
+)
+class RoleModelObjectBackendTests(BackendTestsCommon, ModelTestCase):
 	def setUp(self):
 		super().setUp()
 		self.backend = RoleModelObjectBackend()

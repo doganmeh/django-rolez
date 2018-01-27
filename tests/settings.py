@@ -9,6 +9,7 @@ INSTALLED_APPS = (
 	'django.contrib.sessions',
 	'django.contrib.admin',
 	'rolez',
+	'guardian',
 	'tests.test_app',
 	)
 
@@ -21,9 +22,12 @@ DATABASES = {
     }
 }
 
+# usually overridden in tests
 AUTHENTICATION_BACKENDS = (
     'django.contrib.auth.backends.ModelBackend',
     'rolez.backend.RoleModelBackend',
-)
+    'rolez.backend.RoleModelObjectBackend',
+	 'guardian.backends.ObjectPermissionBackend',
+	 )
 
 # ROOT_URLCONF = 'rolez.urls'

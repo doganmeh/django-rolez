@@ -84,7 +84,7 @@ class RoleModelObjectBackend(object):
 
 	def has_perm(self, user_obj, perm, obj=None):
 		perm = get_perm_from_str(perm)
-		if perm.role:
+		if hasattr(perm, 'role'):
 			return False # exclude delegates not to get in a infinite loop
 		# if could choose backends, would also be able to include roles in roles (
 		# delegates in role permissions)

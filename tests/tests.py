@@ -7,6 +7,7 @@ from rolez.models import Role
 from rolez.backend import RoleModelBackend, RoleModelObjectBackend
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.auth import get_user_model
+from guardian.shortcuts import assign_perm
 
 UserModel = get_user_model()
 
@@ -61,33 +62,35 @@ class BackendTestsCommon(object):
 		self.brandon.groups.add(self.admins_group)
 
 		content_type = ContentType.objects.get_for_model(Author)
-		self.add_author = Permission.objects.get(content_type=content_type, codename='add_author')
+		self.change_author = Permission.objects.get(content_type=content_type, codename='change_author')
 		self.delete_author = Permission.objects.get(content_type=content_type, codename='delete_author')
 
 		content_type = ContentType.objects.get_for_model(Blog)
 		self.change_blog = Permission.objects.get(content_type=content_type, codename='change_blog')
 		self.add_blog = Permission.objects.get(content_type=content_type, codename='add_blog')
 
-		self.manager_role.perms.add(self.add_author, self.delete_author)
+		self.manager_role.perms.add(self.change_author, self.delete_author)
 		self.editor_role.perms.add(self.change_blog)
 		self.author_role.perms.add(self.change_blog, self.add_blog)
 
+		self.twain = Author.objects.create(name="twain")
+		self.twain_blog = Blog.objects.create(name="twain personal blog")
+
+
 	def test_user_deny_non_role_perm(self):
-		self.assertIs(self.backend.has_perm(self.brandon, 'test_app.add_author'), False)
+		self.assertIs(self.backend.has_perm(self.brandon, 'test_app.change_author'), False)
 
 		# will approve perms in roles only
-		self.brandon.user_permissions.add(self.add_author)
-		self.assertIs(self.backend.has_perm(self.brandon, 'test_app.add_author'), False)
+		self.brandon.user_permissions.add(self.change_author)
+		self.assertIs(self.backend.has_perm(self.brandon, 'test_app.change_author'), False)
 
 	def test_user_role_perm(self):
-		role = Role.objects.create (name="Maintenance")
-		role.perms.add(self.add_author)
-		self.brandon.user_permissions.add(role.delegate)
-		self.assertIs(self.brandon.has_perm('rolez.use_role_maintenance'), True)  # default backend
+		self.brandon.user_permissions.add(self.manager_role.delegate)
+		self.assertIs(self.brandon.has_perm('rolez.use_role_manager'), True)  # default backend
 
 		self.backend.clear_cache(self.brandon)
-		self.assertIs(self.backend.has_perm(self.brandon, 'test_app.add_author'), True)
-		self.assertIs(self.backend.has_perm(self.jack, 'test_app.add_author'), False)
+		self.assertIs(self.backend.has_perm(self.brandon, 'test_app.change_author'), True)
+		self.assertIs(self.backend.has_perm(self.jack, 'test_app.change_author'), False)
 
 	def test_group_deny_non_role_perm(self):
 		self.assertEqual(self.jack.groups.all().__len__(), 1)
@@ -131,20 +134,20 @@ class RoleModelBackendTests(BackendTestsCommon, ModelTestCase):
 		self.admins_group.permissions.add(self.manager_role.delegate) # all admins have manager role
 		self.backend.clear_cache(self.brandon)
 		self.assertEqual(self.backend.get_all_permissions(self.brandon),
-						 {'test_app.add_author', 'test_app.delete_author'})
+						 {'test_app.change_author', 'test_app.delete_author'})
 
 		# will approve perms in roles only
 		# brandon decides to write on the side; but perms not recognized by roles supervisor
-		self.brandon.user_permissions.add(self.add_author)
+		self.brandon.user_permissions.add(self.change_author)
 		self.backend.clear_cache(self.brandon)
 		self.assertEqual(self.backend.get_all_permissions(self.brandon),
-						 {'test_app.add_author', 'test_app.delete_author'})
+						 {'test_app.change_author', 'test_app.delete_author'})
 
 		# brandon gets it right this time
 		self.brandon.user_permissions.add(self.author_role.delegate)
 		self.backend.clear_cache(self.brandon)
 		self.assertEqual(self.backend.get_all_permissions(self.brandon),
-						 {'test_app.add_author', 'test_app.delete_author',
+						 {'test_app.change_author', 'test_app.delete_author',
 							 'test_app.add_blog', 'test_app.change_blog'})
 
 
@@ -152,6 +155,7 @@ class RoleModelBackendTests(BackendTestsCommon, ModelTestCase):
     AUTHENTICATION_BACKENDS=[
 		  'django.contrib.auth.backends.ModelBackend',
 		  'rolez.backend.RoleModelObjectBackend',
+		  'guardian.backends.ObjectPermissionBackend',
 		  ],
 )
 class RoleModelObjectBackendTests(BackendTestsCommon, ModelTestCase):
@@ -159,3 +163,42 @@ class RoleModelObjectBackendTests(BackendTestsCommon, ModelTestCase):
 		super().setUp()
 		self.backend = RoleModelObjectBackend()
 
+	def test_user_deny_non_role_obj_perm(self):
+		self.assertIs(self.backend.has_perm(self.brandon, 'test_app.change_author', self.twain), False)
+
+		# will approve perms in roles only
+		assign_perm(self.change_author, self.brandon, self.twain)
+		self.assertIs(self.backend.has_perm(self.brandon, 'test_app.change_author', self.twain), False)
+
+	def test_user_role_obj_perm(self):
+		assign_perm(self.manager_role.delegate, self.brandon, self.twain)
+		self.backend.clear_cache(self.brandon)
+
+		self.assertIs(self.brandon.has_perm('rolez.use_role_manager', self.twain), True)  # default backend
+
+		self.assertIs(self.backend.has_perm(self.brandon, 'test_app.change_author', self.twain), True)
+		self.assertIs(self.backend.has_perm(self.jack, 'test_app.change_author', self.twain), False)
+
+	def test_group_deny_non_role_obj_perm(self):
+		self.assertEqual(self.jack.groups.all().__len__(), 1)
+		self.assertEqual(self.brandon.groups.all().__len__(), 1)
+
+		# will approve perms in roles only
+		assign_perm(self.delete_author, self.admins_group, self.twain)
+		self.assertIs(self.backend.has_perm(self.brandon, 'test_app.delete_author', self.twain), False)
+
+	def test_group_role_obj_perm(self):
+		self.assertIs(self.backend.has_perm(self.jack, 'test_app.change_blog'), False)
+		self.assertIs(self.backend.has_perm(self.jack, 'test_app.add_blog'), False)
+
+		assign_perm(self.editor_role.delegate, self.users_group, self.twain)
+
+		self.backend.clear_cache(self.jack)
+		self.backend.clear_cache(self.brandon)
+
+		self.assertIs(self.jack.has_perm('rolez.use_role_editor', self.twain), True)  # default backend
+		self.assertIs(self.backend.has_perm(self.jack, 'test_app.change_blog', self.twain), True)
+		self.assertIs(self.backend.has_perm(self.jack, 'test_app.add_blog', self.twain), False) # not author
+
+		self.assertIs(self.brandon.has_perm('rolez.use_role_editor', self.twain), False)
+		self.assertIs(self.backend.has_perm(self.brandon, 'test_app.change_blog', self.twain), False)

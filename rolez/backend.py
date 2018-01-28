@@ -16,6 +16,9 @@ class RoleModelBackend(object):
 		if hasattr(user, '_user_perm_cache'): del user._user_perm_cache
 		if hasattr(user, '_perm_cache'): del user._perm_cache
 
+		# and guardian cache for convenience here
+		if hasattr(user, '_obj_perm_cache'): del user._obj_perm_cache
+
 
 	def authenticate(self, username, password):
 		return None

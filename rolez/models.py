@@ -7,7 +7,7 @@ from django.db import models
 UserModel = get_user_model()
 
 
-class Role(models.Model):
+class AbstractRole(models.Model):
 	name = models.CharField(
 		max_length=90, unique=True,  # auth.Permission codename length is 100
 		error_messages={
@@ -34,3 +34,9 @@ class Role(models.Model):
 	def delete(self, **kwargs):
 		super().delete(**kwargs)
 		self.delegate.delete()
+
+	class Meta:
+		abstract=True
+
+class Role(AbstractRole):
+	pass

@@ -84,14 +84,6 @@ class BackendTestsCommon(object):
 		self.brandon.user_permissions.add(self.change_author)
 		self.assertIs(self.backend.has_perm(self.brandon, 'test_app.change_author'), False)
 
-	def test_user_role_perm(self):
-		self.brandon.user_permissions.add(self.manager_role.delegate)
-		self.assertIs(self.brandon.has_perm('rolez.use_role_manager'), True)  # default backend
-
-		self.backend.clear_cache(self.brandon)
-		self.assertIs(self.backend.has_perm(self.brandon, 'test_app.change_author'), True)
-		self.assertIs(self.backend.has_perm(self.jack, 'test_app.change_author'), False)
-
 	def test_group_deny_non_role_perm(self):
 		self.assertEqual(self.jack.groups.all().__len__(), 1)
 		self.assertEqual(self.brandon.groups.all().__len__(), 1)
@@ -100,7 +92,27 @@ class BackendTestsCommon(object):
 		self.admins_group.permissions.add(self.delete_author)
 		self.assertIs(self.backend.has_perm(self.brandon, 'test_app.delete_author'), False)
 
-	def test_group_role_perm(self):
+
+@override_settings(
+    AUTHENTICATION_BACKENDS=[
+		  'django.contrib.auth.backends.ModelBackend',
+		  'rolez.backend.RoleModelBackend',
+		  ],
+)
+class RoleModelBackendTests(BackendTestsCommon, ModelTestCase):
+	def setUp(self):
+		super().setUp()
+		self.backend = RoleModelBackend()
+
+	def test_user_allow_role_perm(self):
+		self.brandon.user_permissions.add(self.manager_role.delegate)
+		self.assertIs(self.brandon.has_perm('rolez.use_role_manager'), True)  # default backend
+
+		self.backend.clear_cache(self.brandon)
+		self.assertIs(self.backend.has_perm(self.brandon, 'test_app.change_author'), True)
+		self.assertIs(self.backend.has_perm(self.jack, 'test_app.change_author'), False)
+
+	def test_group_allow_role_perm(self):
 		self.assertIs(self.backend.has_perm(self.jack, 'test_app.change_blog'), False)
 		self.assertIs(self.backend.has_perm(self.jack, 'test_app.add_blog'), False)
 
@@ -115,18 +127,6 @@ class BackendTestsCommon(object):
 
 		self.assertIs(self.brandon.has_perm('rolez.use_role_editor'), False)
 		self.assertIs(self.backend.has_perm(self.brandon, 'test_app.change_blog'), False)
-
-
-@override_settings(
-    AUTHENTICATION_BACKENDS=[
-		  'django.contrib.auth.backends.ModelBackend',
-		  'rolez.backend.RoleModelBackend',
-		  ],
-)
-class RoleModelBackendTests(BackendTestsCommon, ModelTestCase):
-	def setUp(self):
-		super().setUp()
-		self.backend = RoleModelBackend()
 
 	def test_get_all_permissions(self):
 		self.assertEqual(self.backend.get_all_permissions(self.brandon), set())
@@ -163,6 +163,30 @@ class RoleModelObjectBackendTests(BackendTestsCommon, ModelTestCase):
 		super().setUp()
 		self.backend = RoleModelObjectBackend()
 
+	def test_user_deny_non_obj_role_perm(self):
+		self.brandon.user_permissions.add(self.manager_role.delegate)
+		self.assertIs(self.brandon.has_perm('rolez.use_role_manager'), True)  # default backend
+
+		self.backend.clear_cache(self.brandon)
+		self.assertIs(self.backend.has_perm(self.brandon, 'test_app.change_author'), False)
+		self.assertIs(self.backend.has_perm(self.jack, 'test_app.change_author'), False)
+
+	def test_group_deny_non_obj_role_perm(self):
+		self.assertIs(self.backend.has_perm(self.jack, 'test_app.change_blog'), False)
+		self.assertIs(self.backend.has_perm(self.jack, 'test_app.add_blog'), False)
+
+		self.users_group.permissions.add(self.editor_role.delegate) # all users have editor role
+
+		self.backend.clear_cache(self.jack)
+		self.backend.clear_cache(self.brandon)
+
+		self.assertIs(self.jack.has_perm('rolez.use_role_editor'), True)  # default backend
+		self.assertIs(self.backend.has_perm(self.jack, 'test_app.change_blog'), False)
+		self.assertIs(self.backend.has_perm(self.jack, 'test_app.add_blog'), False) # not author
+
+		self.assertIs(self.brandon.has_perm('rolez.use_role_editor'), False)
+		self.assertIs(self.backend.has_perm(self.brandon, 'test_app.change_blog'), False)
+
 	def test_user_deny_non_role_obj_perm(self):
 		self.assertIs(self.backend.has_perm(self.brandon, 'test_app.change_author', self.twain), False)
 
@@ -170,7 +194,7 @@ class RoleModelObjectBackendTests(BackendTestsCommon, ModelTestCase):
 		assign_perm(self.change_author, self.brandon, self.twain)
 		self.assertIs(self.backend.has_perm(self.brandon, 'test_app.change_author', self.twain), False)
 
-	def test_user_role_obj_perm(self):
+	def test_user_allow_role_obj_perm(self):
 		assign_perm(self.manager_role.delegate, self.brandon, self.twain)
 		self.backend.clear_cache(self.brandon)
 
@@ -187,7 +211,7 @@ class RoleModelObjectBackendTests(BackendTestsCommon, ModelTestCase):
 		assign_perm(self.delete_author, self.admins_group, self.twain)
 		self.assertIs(self.backend.has_perm(self.brandon, 'test_app.delete_author', self.twain), False)
 
-	def test_group_role_obj_perm(self):
+	def test_group_allow_role_obj_perm(self):
 		self.assertIs(self.backend.has_perm(self.jack, 'test_app.change_blog'), False)
 		self.assertIs(self.backend.has_perm(self.jack, 'test_app.add_blog'), False)
 

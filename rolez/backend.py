@@ -11,6 +11,8 @@ def clear_cache(user):
 	if hasattr(user, '_user_role_perm_cache'): del user._user_role_perm_cache
 	if hasattr(user, '_group_role_perm_cache'): del user._group_role_perm_cache
 
+	if hasattr(user, '_role_obj_perm_cache'): del user._role_obj_perm_cache
+
 	# and django cache for convenience here
 	if hasattr(user, '_group_perm_cache'): del user._group_perm_cache
 	if hasattr(user, '_user_perm_cache'): del user._user_perm_cache
@@ -99,20 +101,27 @@ class RoleModelObjectBackend(object):
 # 		pass
 
 	def has_perm(self, user_obj, perm, obj=None):
-		# todo: add cache
-		perm = get_perm_from_str(perm)
-		if hasattr(perm, 'role'):
-			return False # exclude delegates not to get in a infinite loop
-		# if could choose backends, would also be able to include roles in roles (
-		# delegates in role permissions)
+		if obj is None:
+			return False
 
-		delegates = Permission.objects.filter(role__perms=perm) \
-			.values_list('content_type__app_label', 'codename').order_by()
-		delegates = {"%s.%s" % (ct, name) for ct, name in delegates}
-		for delegate in delegates:
-			if user_obj.has_perm(delegate, obj): 										# ??!
-				return True
-		return False
+		if not hasattr(user_obj, '_role_obj_perm_cache'):
+			user_obj._role_obj_perm_cache = {}
+
+		key = self.get_cache_key(obj, perm)
+		if key not in user_obj._role_obj_perm_cache:
+			user_obj._role_obj_perm_cache[key] = False
+			perm = get_perm_from_str(perm)
+			if not hasattr(perm, 'role'):
+				# exclude delegates not to get in a infinite loop
+				# if could choose backends, would also be able to include roles in roles (
+				# delegates in role permissions)
+				delegates = Permission.objects.filter(role__perms=perm) \
+					.values_list('content_type__app_label', 'codename').order_by()
+				delegates = {"%s.%s" % (ct, name) for ct, name in delegates}
+				for delegate in delegates:
+					if user_obj.has_perm(delegate, obj): 										# ??!
+						user_obj._role_obj_perm_cache[key] = True
+		return user_obj._role_obj_perm_cache[key]
 
 	def get_cache_key(self, obj, perm):
 		return (obj._meta.app_label, obj._meta.model_name, obj.pk, perm)

@@ -17,7 +17,7 @@ def clear_cache(user):
 	if hasattr(user, '_perm_cache'): del user._perm_cache
 
 	# and guardian cache for convenience here
-	if hasattr(user, '_obj_perm_cache'): del user._obj_perm_cache
+	if hasattr(user, '_obj_perm_cache'): setattr(user, '_obj_perm_cache', {})
 
 
 class RoleModelBackend(object):
@@ -113,6 +113,9 @@ class RoleModelObjectBackend(object):
 			if user_obj.has_perm(delegate, obj): 										# ??!
 				return True
 		return False
+
+	def get_cache_key(self, obj, perm):
+		return (obj._meta.app_label, obj._meta.model_name, obj.pk, perm)
 
 # 	def has_module_perms(self, user_obj, app_label):
 # 		pass

@@ -5,20 +5,24 @@ from rolez.models import Role
 from rolez.util import get_perm_from_str
 
 
+
+def clear_cache(user):
+	if hasattr(user, '_role_perm_cache'): del user._role_perm_cache
+	if hasattr(user, '_user_role_perm_cache'): del user._user_role_perm_cache
+	if hasattr(user, '_group_role_perm_cache'): del user._group_role_perm_cache
+
+	# and django cache for convenience here
+	if hasattr(user, '_group_perm_cache'): del user._group_perm_cache
+	if hasattr(user, '_user_perm_cache'): del user._user_perm_cache
+	if hasattr(user, '_perm_cache'): del user._perm_cache
+
+	# and guardian cache for convenience here
+	if hasattr(user, '_obj_perm_cache'): del user._obj_perm_cache
+
+
 class RoleModelBackend(object):
 	def clear_cache(self, user):
-		if hasattr(user, '_role_perm_cache'): del user._role_perm_cache
-		if hasattr(user, '_user_role_perm_cache'): del user._user_role_perm_cache
-		if hasattr(user, '_group_role_perm_cache'): del user._group_role_perm_cache
-
-		# and django cache for convenience here
-		if hasattr(user, '_group_perm_cache'): del user._group_perm_cache
-		if hasattr(user, '_user_perm_cache'): del user._user_perm_cache
-		if hasattr(user, '_perm_cache'): del user._perm_cache
-
-		# and guardian cache for convenience here
-		if hasattr(user, '_obj_perm_cache'): del user._obj_perm_cache
-
+		clear_cache(user)
 
 	def authenticate(self, username, password):
 		return None
@@ -76,13 +80,14 @@ class RoleModelBackend(object):
 
 class RoleModelObjectBackend(object):
 	def clear_cache(self, user):
-		# and django cache for convenience here
-		if hasattr(user, '_group_perm_cache'): del user._group_perm_cache
-		if hasattr(user, '_user_perm_cache'): del user._user_perm_cache
-		if hasattr(user, '_perm_cache'): del user._perm_cache
+		clear_cache(user)
 
 	def authenticate(self, username, password):
 		return None
+
+# the following 3 methods are not implemented since Django currently does not allow
+# addressing other backends. I.e., without a way not responding to itself a call
+# to user.get_*_permissions would cause an infinite loop
 
 # 	def get_user_permissions(self, user_obj, obj=None):
 # 		pass
@@ -94,6 +99,7 @@ class RoleModelObjectBackend(object):
 # 		pass
 
 	def has_perm(self, user_obj, perm, obj=None):
+		# todo: add cache
 		perm = get_perm_from_str(perm)
 		if hasattr(perm, 'role'):
 			return False # exclude delegates not to get in a infinite loop

@@ -77,14 +77,14 @@ class BackendTestsCommon(object):
 		self.twain_blog = Blog.objects.create(name="twain personal blog")
 
 
-	def test_user_deny_non_role_perm(self):
+	def test_user_deny_non_role_model_perm(self):
 		self.assertIs(self.backend.has_perm(self.brandon, 'test_app.change_author'), False)
 
 		# will approve perms in roles only
 		self.brandon.user_permissions.add(self.change_author)
 		self.assertIs(self.backend.has_perm(self.brandon, 'test_app.change_author'), False)
 
-	def test_group_deny_non_role_perm(self):
+	def test_group_deny_non_role_model_perm(self):
 		self.assertEqual(self.jack.groups.all().__len__(), 1)
 		self.assertEqual(self.brandon.groups.all().__len__(), 1)
 
@@ -104,7 +104,7 @@ class RoleModelBackendTests(BackendTestsCommon, ModelTestCase):
 		super().setUp()
 		self.backend = RoleModelBackend()
 
-	def test_user_allow_role_perm(self):
+	def test_user_allow_role_model_perm(self):
 		self.brandon.user_permissions.add(self.manager_role.delegate)
 		self.assertIs(self.brandon.has_perm('rolez.use_role_manager'), True)  # default backend
 
@@ -112,7 +112,7 @@ class RoleModelBackendTests(BackendTestsCommon, ModelTestCase):
 		self.assertIs(self.backend.has_perm(self.brandon, 'test_app.change_author'), True)
 		self.assertIs(self.backend.has_perm(self.jack, 'test_app.change_author'), False)
 
-	def test_group_allow_role_perm(self):
+	def test_group_allow_role_model_perm(self):
 		self.assertIs(self.backend.has_perm(self.jack, 'test_app.change_blog'), False)
 		self.assertIs(self.backend.has_perm(self.jack, 'test_app.add_blog'), False)
 
@@ -163,7 +163,7 @@ class RoleModelObjectBackendTests(BackendTestsCommon, ModelTestCase):
 		super().setUp()
 		self.backend = RoleModelObjectBackend()
 
-	def test_user_deny_non_obj_role_perm(self):
+	def test_user_deny_role_model_perm(self):
 		self.brandon.user_permissions.add(self.manager_role.delegate)
 		self.assertIs(self.brandon.has_perm('rolez.use_role_manager'), True)  # default backend
 
@@ -171,7 +171,7 @@ class RoleModelObjectBackendTests(BackendTestsCommon, ModelTestCase):
 		self.assertIs(self.backend.has_perm(self.brandon, 'test_app.change_author'), False)
 		self.assertIs(self.backend.has_perm(self.jack, 'test_app.change_author'), False)
 
-	def test_group_deny_non_obj_role_perm(self):
+	def test_group_deny_role_model_perm(self):
 		self.assertIs(self.backend.has_perm(self.jack, 'test_app.change_blog'), False)
 		self.assertIs(self.backend.has_perm(self.jack, 'test_app.add_blog'), False)
 

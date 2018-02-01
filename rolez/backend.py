@@ -1,24 +1,7 @@
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Permission
 
-from rolez.models import Role
-from rolez.util import get_perm_from_str
-
-
-def clear_cache(user):
-    if hasattr(user, '_role_perm_cache'): del user._role_perm_cache
-    if hasattr(user, '_user_role_perm_cache'): del user._user_role_perm_cache
-    if hasattr(user, '_group_role_perm_cache'): del user._group_role_perm_cache
-
-    if hasattr(user, '_role_obj_perm_cache'): del user._role_obj_perm_cache
-
-    # and django cache for convenience here
-    if hasattr(user, '_group_perm_cache'): del user._group_perm_cache
-    if hasattr(user, '_user_perm_cache'): del user._user_perm_cache
-    if hasattr(user, '_perm_cache'): del user._perm_cache
-
-    # and guardian cache for convenience here
-    if hasattr(user, '_obj_perm_cache'): setattr(user, '_obj_perm_cache', {})
+from rolez.util import get_perm_from_str, clear_cache, get_cache_key
 
 
 class RoleModelBackend(object):
@@ -99,14 +82,15 @@ class RoleModelObjectBackend(object):
     # 	def get_all_permissions(self, user_obj, obj=None):
     # 		pass
 
-    def has_perm(self, user_obj, perm, obj=None):
+    @staticmethod
+    def has_perm(user_obj, perm, obj=None):
         if obj is None:
             return False
 
         if not hasattr(user_obj, '_role_obj_perm_cache'):
             user_obj._role_obj_perm_cache = {}
 
-        key = self.get_cache_key(obj, perm)
+        key = get_cache_key(obj, perm)
         if key not in user_obj._role_obj_perm_cache:
             user_obj._role_obj_perm_cache[key] = False
             perm = get_perm_from_str(perm)

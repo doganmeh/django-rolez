@@ -27,10 +27,12 @@ DATABASES = {
 AUTHENTICATION_BACKENDS = (
     'django.contrib.auth.backends.ModelBackend',
     'rolez.backend.RoleModelBackend',
-    'rolez.backend.RoleModelObjectBackend',
+    'rolez.backend.RoleObjectBackend',
     'guardian.backends.ObjectPermissionBackend',
 )
 
 # ROOT_URLCONF = 'rolez.urls'
 
 GUARDIAN_ALLOW_CROSS_MODEL_PERMISSIONS = True
+
+AUTH_USER_MODEL = 'test_app.RoleUser'

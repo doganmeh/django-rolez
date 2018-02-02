@@ -1,0 +1,80 @@
+from django.conf import settings
+from django.contrib.auth.models import Permission
+
+from rolez.util import clear_cache, get_cache_key, get_perm_from_str, get_perms_from_delegate
+
+
+def _has_backend(name):
+    for backend in settings.AUTHENTICATION_BACKENDS:
+        if backend.endswith(name):
+            return True
+    return False
+
+
+class UserRoleMixin(object):
+    def clear_cache(self):
+        clear_cache(self)
+
+    def _get_role_perms(self, obj, from_name):
+        super_ = getattr(super(), 'get_%s_permissions' % from_name)
+        if (obj is None and _has_backend('RoleModelBackend')
+                or obj is not None and _has_backend('RoleObjectBackend')):
+            return super_(obj)
+
+        cache_name = '_%s_role_perm_cache' % from_name
+        if hasattr(self, cache_name):
+            return getattr(self, cache_name)
+
+        if self.is_superuser:
+            perms_role_added = {"%s.%s" % (p.content_type.app_label, p.codename)
+                                             for p in Permission.objects.all()}
+        else:
+            perms = super_(obj)
+            perms_role_added = set(perms)
+            for perm in perms:
+                if perm[:perm.index('.')] == 'rolez':
+                    perms_role_added.update({"%s.%s" % (p.content_type.app_label, p.codename)
+                                             for p in get_perms_from_delegate(perm)})
+                    # todo: this will make n trips to the db
+        setattr(self, cache_name, perms_role_added)
+        return perms_role_added
+
+    def get_group_role_perms(self, obj=None):
+        return self._get_role_perms(obj, 'group')
+
+    def get_all_role_perms(self, obj=None):
+        return self._get_role_perms(obj, 'all')
+
+    def has_role_perm(self, perm, obj=None):
+        if super().has_perm(perm, obj):
+            # like django, this can only refer to its super, not get_(group|all)_permissions
+            # directly bc a backend is not required to implement them all
+            return True
+
+        if obj is None and not _has_backend('RoleModelBackend'):
+            return perm in self.get_all_role_perms()
+
+        if obj is not None and not _has_backend('RoleObjectBackend'):
+            if not hasattr(self, '_role_obj_cache'):
+                self._role_obj_cache = {}
+
+            key = get_cache_key(obj, perm)
+            if key in self._role_obj_cache:
+                return self._role_obj_cache[key]
+
+            # this should be more performant than RoleObjectBackend since it runs when super fails
+            # in the other, they both always run
+            self._role_obj_cache[key] = False
+            perm = get_perm_from_str(perm)
+            if not hasattr(perm, 'role'):  # not delegate
+                delegates = Permission.objects.filter(role__perms=perm) \
+                    .values_list('content_type__app_label', 'codename').order_by()
+                delegates = {"%s.%s" % (ct, name) for ct, name in delegates}
+                for delegate in delegates:
+                    if super().has_perm(delegate, obj):
+                        self._role_obj_cache[key] = True
+                        return True
+        return False
+
+# 	def has_module_perms(self, user_obj, app_label):
+# 		pass

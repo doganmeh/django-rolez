@@ -1,4 +1,6 @@
 from django.db import models
+from rolez.mixins import UserRoleMixin
+from django.contrib.auth.models import AbstractUser
 
 
 class Blog(models.Model):
@@ -50,3 +52,7 @@ class Entry(models.Model):
 
     def get_interaction_total(self):
         return self.n_comments + self.n_pingbacks
+
+
+class RoleUser(UserRoleMixin, AbstractUser):
+    pass

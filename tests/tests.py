@@ -4,10 +4,11 @@ from django.test import TestCase as ModelTestCase, override_settings  # use when
 from unittest import TestCase as NonModelTestCase  # use otherwise
 from tests.test_app.models import Author, Blog
 from rolez.models import Role
-from rolez.backend import RoleModelBackend, RoleModelObjectBackend
+from rolez.backend import RoleModelBackend, RoleObjectBackend
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.auth import get_user_model
 from guardian.shortcuts import assign_perm
+from rolez.mixins import _has_backend
 
 UserModel = get_user_model()
 
@@ -153,14 +154,14 @@ class RoleModelBackendTests(BackendTestsCommon, ModelTestCase):
 @override_settings(
     AUTHENTICATION_BACKENDS=[
         'django.contrib.auth.backends.ModelBackend',
-        'rolez.backend.RoleModelObjectBackend',
+        'rolez.backend.RoleObjectBackend',
         'guardian.backends.ObjectPermissionBackend',
     ],
 )
-class RoleModelObjectBackendTests(BackendTestsCommon, ModelTestCase):
+class RoleObjectBackendTests(BackendTestsCommon, ModelTestCase):
     def setUp(self):
         super().setUp()
-        self.backend = RoleModelObjectBackend()
+        self.backend = RoleObjectBackend()
 
     def test_user_deny_role_model_perm(self):
         self.brandon.user_permissions.add(self.manager_role.delegate)

@@ -58,7 +58,7 @@ class RoleModelBackend(object):
         return False
 
 
-class RoleModelObjectBackend(object):
+class RoleObjectBackend(object):
     def clear_cache(self, user):
         clear_cache(user)
 

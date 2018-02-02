@@ -46,16 +46,12 @@ class RoleModelBackend(object):
         return user_obj._role_perm_cache
 
     def has_perm(self, user_obj, perm, obj=None):
-        if not user_obj.is_active:
-            return False
         return perm in self.get_all_permissions(user_obj, obj)
 
     def has_module_perms(self, user_obj, app_label):
         """
         Return True if user_obj has any roles with permissions in the given app_label.
         """
-        if not user_obj.is_active:
-            return False
         for perm in self.get_all_permissions(user_obj):
             if perm[:perm.index('.')] == app_label:
                 return True

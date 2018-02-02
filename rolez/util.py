@@ -6,11 +6,11 @@ def get_cache_key(obj, perm):
 
 
 def clear_cache(user):
-    if hasattr(user, '_role_perm_cache'): del user._role_perm_cache
-    if hasattr(user, '_user_role_perm_cache'): del user._user_role_perm_cache
-    if hasattr(user, '_group_role_perm_cache'): del user._group_role_perm_cache
+    if hasattr(user, '_role_model_cache'): del user._role_model_cache
+    if hasattr(user, '_user_role_model_cache'): del user._user_role_model_cache
+    if hasattr(user, '_group_role_model_cache'): del user._group_role_model_cache
 
-    if hasattr(user, '_role_obj_perm_cache'): del user._role_obj_perm_cache
+    if hasattr(user, '_role_obj_cache'): del user._role_obj_cache
 
     # and django cache for convenience here
     if hasattr(user, '_group_perm_cache'): del user._group_perm_cache

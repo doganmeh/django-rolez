@@ -23,7 +23,7 @@ class RoleModelBackend(object):
     def _get_permissions(self, user_obj, obj, from_name):
         if not user_obj.is_active or user_obj.is_anonymous or obj is not None:
             return set()
-        perm_cache_name = '_%s_role_perm_cache' % from_name
+        perm_cache_name = '_%s_role_model_cache' % from_name
         if not hasattr(user_obj, perm_cache_name):
             perms = getattr(self, '_get_%s_permissions' % from_name)(user_obj)
             perms = perms.values_list('content_type__app_label', 'codename').order_by()
@@ -39,11 +39,11 @@ class RoleModelBackend(object):
     def get_all_permissions(self, user_obj, obj=None):
         if not user_obj.is_active or user_obj.is_anonymous or obj is not None:
             return set()
-        if not hasattr(user_obj, '_role_perm_cache'):
-            user_obj._role_perm_cache = set()
-            user_obj._role_perm_cache.update(self.get_user_permissions(user_obj))
-            user_obj._role_perm_cache.update(self.get_group_permissions(user_obj))
-        return user_obj._role_perm_cache
+        if not hasattr(user_obj, '_role_model_cache'):
+            user_obj._role_model_cache = set()
+            user_obj._role_model_cache.update(self.get_user_permissions(user_obj))
+            user_obj._role_model_cache.update(self.get_group_permissions(user_obj))
+        return user_obj._role_model_cache
 
     def has_perm(self, user_obj, perm, obj=None):
         return perm in self.get_all_permissions(user_obj, obj)
@@ -83,12 +83,15 @@ class RoleModelObjectBackend(object):
         if obj is None:
             return False
 
-        if not hasattr(user_obj, '_role_obj_perm_cache'):
-            user_obj._role_obj_perm_cache = {}
+        if not hasattr(user_obj, '_role_obj_cache'):
+            user_obj._role_obj_cache = {}
+
+        # could check here if non-role obj backend granted permission
+        # depending on the # of roles having that perm, could perform better
 
         key = get_cache_key(obj, perm)
-        if key not in user_obj._role_obj_perm_cache:
-            user_obj._role_obj_perm_cache[key] = False
+        if key not in user_obj._role_obj_cache:
+            user_obj._role_obj_cache[key] = False
             perm = get_perm_from_str(perm)
             if not hasattr(perm, 'role'):
                 # check regular perms; i.e. exclude delegates, not to get in a infinite loop
@@ -99,8 +102,8 @@ class RoleModelObjectBackend(object):
                 delegates = {"%s.%s" % (ct, name) for ct, name in delegates}
                 for delegate in delegates:
                     if user_obj.has_perm(delegate, obj):  # ??!
-                        user_obj._role_obj_perm_cache[key] = True
-        return user_obj._role_obj_perm_cache[key]
+                        user_obj._role_obj_cache[key] = True
+        return user_obj._role_obj_cache[key]
 
     def get_cache_key(self, obj, perm):
         return (obj._meta.app_label, obj._meta.model_name, obj.pk, perm)

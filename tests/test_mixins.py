@@ -70,6 +70,34 @@ class UserRoleMixinTestsCommon(object):
         self.twain = Author.objects.create(name="twain")
         self.twain_blog = Blog.objects.create(name="twain personal blog")
 
+        self.all_perms = {
+            'rolez.add_role',
+            'rolez.change_role',
+            'rolez.delete_role',
+            'rolez.use_role_author',
+            'rolez.use_role_editor',
+            'rolez.use_role_manager',
+            'test_app.add_author',
+            'test_app.add_blog',
+            'test_app.add_entry',
+            'test_app.add_roleuser',
+            'test_app.change_author',
+            'test_app.change_blog',
+            'test_app.change_entry',
+            'test_app.change_roleuser',
+            'test_app.delete_author',
+            'test_app.delete_blog',
+            'test_app.delete_entry',
+            'test_app.delete_roleuser',
+        }
+
+    def test_super_user_model_perms(self):
+        self.brandon.is_superuser = True
+        for perm in self.all_perms:
+            self.assertIn(perm, self.brandon.get_all_permissions())
+            self.assertIn(perm, self.brandon.get_group_role_perms())
+            self.assertIn(perm, self.brandon.get_all_role_perms())
+
 
 @override_settings(
     AUTHENTICATION_BACKENDS=[

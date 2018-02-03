@@ -1,7 +1,8 @@
 from django.conf import settings
 from django.contrib.auth.models import Permission
 
-from rolez.util import clear_cache, get_cache_key, get_perm_from_str, get_perms_from_delegate
+from rolez.util import clear_cache, get_cache_key, get_perm_from_str, get_perms_from_delegate, \
+    perms_to_str
 
 
 def _has_backend(name):
@@ -26,9 +27,7 @@ class UserRoleMixin(object):
             return getattr(self, cache_name)
 
         if self.is_superuser:
-            perms_role_added = {"%s.%s" % (ct, name) for ct, name in
-                                Permission.objects.all()
-                                    .values_list('content_type__app_label', 'codename')}
+            perms_role_added = perms_to_str(Permission.objects.all())
         else:
             perms = super_(obj)
             perms_role_added = set(perms)
@@ -67,9 +66,7 @@ class UserRoleMixin(object):
             self._role_obj_cache[key] = False
             perm = get_perm_from_str(perm)
             if not hasattr(perm, 'role'):  # not delegate
-                delegates = Permission.objects.filter(role__perms=perm) \
-                    .values_list('content_type__app_label', 'codename').order_by()
-                delegates = {"%s.%s" % (ct, name) for ct, name in delegates}
+                delegates = perms_to_str(Permission.objects.filter(role__perms=perm))
                 for delegate in delegates:
                     if super().has_perm(delegate, obj):
                         self._role_obj_cache[key] = True

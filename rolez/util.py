@@ -40,7 +40,10 @@ def get_role_from_delegate(delegate):
     return delegate.role
 
 
-def get_perms_from_delegate(delegate):
+def perms_to_str(perms):
     return {"%s.%s" % (ct, name) for ct, name in
-            get_role_from_delegate(delegate).perms
-                .values_list('content_type__app_label', 'codename')}
+            perms.values_list('content_type__app_label', 'codename')}
+
+
+def get_perms_from_delegate(delegate):
+    return perms_to_str(get_role_from_delegate(delegate).perms)

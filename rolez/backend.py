@@ -1,7 +1,7 @@
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Permission
 
-from rolez.util import get_perm_from_str, clear_cache, get_cache_key
+from rolez.util import get_perm_from_str, clear_cache, get_cache_key, perms_to_str
 
 
 class RoleModelBackend(object):
@@ -26,8 +26,8 @@ class RoleModelBackend(object):
         perm_cache_name = '_%s_role_model_cache' % from_name
         if not hasattr(user_obj, perm_cache_name):
             perms = getattr(self, '_get_%s_permissions' % from_name)(user_obj)
-            perms = perms.values_list('content_type__app_label', 'codename').order_by()
-            setattr(user_obj, perm_cache_name, {"%s.%s" % (ct, name) for ct, name in perms})
+            perms = perms_to_str(perms)
+            setattr(user_obj, perm_cache_name, perms)
         return getattr(user_obj, perm_cache_name)
 
     def get_user_permissions(self, user_obj, obj=None):
@@ -97,9 +97,7 @@ class RoleObjectBackend(object):
                 # check regular perms; i.e. exclude delegates, not to get in a infinite loop
                 # if could django allowed choosing backends, would also be possible
                 # to include roles in roles (delegates in role permissions)
-                delegates = Permission.objects.filter(role__perms=perm) \
-                    .values_list('content_type__app_label', 'codename').order_by()
-                delegates = {"%s.%s" % (ct, name) for ct, name in delegates}
+                delegates = perms_to_str(Permission.objects.filter(role__perms=perm))
                 for delegate in delegates:
                     if user_obj.has_perm(delegate, obj):  # ??!
                         user_obj._role_obj_cache[key] = True

@@ -26,15 +26,15 @@ class UserRoleMixin(object):
             return getattr(self, cache_name)
 
         if self.is_superuser:
-            perms_role_added = {"%s.%s" % (p.content_type.app_label, p.codename)
-                                             for p in Permission.objects.all()}
+            perms_role_added = {"%s.%s" % (ct, name) for ct, name in
+                                Permission.objects.all()
+                                    .values_list('content_type__app_label', 'codename')}
         else:
             perms = super_(obj)
             perms_role_added = set(perms)
             for perm in perms:
                 if perm[:perm.index('.')] == 'rolez':
-                    perms_role_added.update({"%s.%s" % (p.content_type.app_label, p.codename)
-                                             for p in get_perms_from_delegate(perm)})
+                    perms_role_added.update(get_perms_from_delegate(perm))
                     # todo: this will make n trips to the db
         setattr(self, cache_name, perms_role_added)
         return perms_role_added

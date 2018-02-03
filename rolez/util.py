@@ -33,10 +33,14 @@ def get_perm_from_str(str):
     return Permission.objects.get(content_type__app_label=app_label,
                                   codename=codename)
 
+
 def get_role_from_delegate(delegate):
     if isinstance(delegate, str):
-        delegate=get_perm_from_str(delegate)
+        delegate = get_perm_from_str(delegate)
     return delegate.role
 
+
 def get_perms_from_delegate(delegate):
-    return list(get_role_from_delegate(delegate).perms.all())
+    return {"%s.%s" % (ct, name) for ct, name in
+            get_role_from_delegate(delegate).perms
+                .values_list('content_type__app_label', 'codename')}

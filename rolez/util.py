@@ -28,7 +28,7 @@ def clear_cache(user):
     if hasattr(user, '_obj_perm_cache'): setattr(user, '_obj_perm_cache', {})
 
 
-def get_perm_from_str(str):
+def str_to_perm(str):
     app_label, codename = str.split('.', 1)
     return Permission.objects.get(content_type__app_label=app_label,
                                   codename=codename)
@@ -36,7 +36,7 @@ def get_perm_from_str(str):
 
 def get_role_from_delegate(delegate):
     if isinstance(delegate, str):
-        delegate = get_perm_from_str(delegate)
+        delegate = str_to_perm(delegate)
     return delegate.role
 
 

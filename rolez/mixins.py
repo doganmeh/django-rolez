@@ -1,7 +1,7 @@
 from django.conf import settings
 from django.contrib.auth.models import Permission
 
-from rolez.util import clear_cache, get_cache_key, get_perm_from_str, get_perms_from_delegate, \
+from rolez.util import clear_cache, get_cache_key, str_to_perm, get_perms_from_delegate, \
     perms_to_str
 
 
@@ -64,7 +64,7 @@ class UserRoleMixin(object):
             # this should be more performant than RoleObjectBackend since it runs when super fails
             # in the other, they both always run
             self._role_obj_cache[key] = False
-            perm = get_perm_from_str(perm)
+            perm = str_to_perm(perm)
             if not hasattr(perm, 'role'):  # not delegate
                 delegates = perms_to_str(Permission.objects.filter(role__perms=perm))
                 for delegate in delegates:

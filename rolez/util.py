@@ -47,3 +47,7 @@ def perms_to_str(perms):
 
 def get_perms_from_delegate(delegate):
     return perms_to_str(get_role_from_delegate(delegate).perms)
+
+
+def get_delegates(perm):
+    return perms_to_str(Permission.objects.filter(role__perms=perm))

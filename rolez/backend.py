@@ -1,7 +1,7 @@
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Permission
 
-from rolez.util import str_to_perm, clear_cache, get_cache_key, perms_to_str
+from rolez.util import str_to_perm, clear_cache, get_cache_key, perms_to_str, get_delegates
 
 
 class RoleModelBackend(object):
@@ -97,8 +97,7 @@ class RoleObjectBackend(object):
                 # check regular perms; i.e. exclude delegates, not to get in a infinite loop
                 # if could django allowed choosing backends, would also be possible
                 # to include roles in roles (delegates in role permissions)
-                delegates = perms_to_str(Permission.objects.filter(role__perms=perm))
-                for delegate in delegates:
+                for delegate in get_delegates(perm):
                     if user_obj.has_perm(delegate, obj):  # ??!
                         user_obj._role_obj_cache[key] = True
         return user_obj._role_obj_cache[key]

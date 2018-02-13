@@ -2,7 +2,7 @@ from django.conf import settings
 from django.contrib.auth.models import Permission
 
 from rolez.util import clear_cache, get_cache_key, str_to_perm, get_perms_from_delegate, \
-    perms_to_str
+    perms_to_str, get_delegates
 
 
 def _has_backend(name):
@@ -66,8 +66,7 @@ class UserRoleMixin(object):
             self._role_obj_cache[key] = False
             perm = str_to_perm(perm)
             if not hasattr(perm, 'role'):  # not delegate
-                delegates = perms_to_str(Permission.objects.filter(role__perms=perm))
-                for delegate in delegates:
+                for delegate in get_delegates(perm):
                     if super().has_perm(delegate, obj):
                         self._role_obj_cache[key] = True
                         return True

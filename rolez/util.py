@@ -30,10 +30,17 @@ def clear_cache(user):
     if hasattr(user, '_obj_perm_cache'): setattr(user, '_obj_perm_cache', {})
 
 
-def str_to_perm(str):
-    app_label, codename = str.split('.', 1)
-    return Permission.objects.get(content_type__app_label=app_label,
-                                  codename=codename)
+def get_perm_filter(perm):
+    if isinstance(perm, str):
+        app_label, codename = perm.split('.', 1)
+        return {'content_type__app_label': app_label,
+                'codename': codename}
+    return {'pk': perm.pk}
+
+
+
+def str_to_perm(perm_str):
+    return Permission.objects.get(**get_perm_filter(perm_str))
 
 
 def perms_to_str(perms):
@@ -41,8 +48,8 @@ def perms_to_str(perms):
             perms.values_list('content_type__app_label', 'codename')}
 
 
-def perm_to_str(perm):
-    return "%s.%s" % (perm.content_type.app_label, perm.codename)
+def perm_to_str(perm_obj):
+    return "%s.%s" % (perm_obj.content_type.app_label, perm_obj.codename)
 
 
 def get_role_from_delegate(delegate):
@@ -60,17 +67,19 @@ def get_delegates(perm):
 
 
 def test_roles_for_perm(roles, perm):
-    if isinstance(perm, str):
-        perm = str_to_perm(perm)
     if isinstance(roles[0], models.Role):
         roles = [role.pk for role in roles]
-    return Permission.objects.filter(role__pk__in=roles) \
-        .filter(role__perms=perm).exists()
+
+    return Permission.objects.filter(roles__pk__in=roles) \
+        .filter(**get_perm_filter(perm)) \
+        .exists()
 
 
 def test_role_for_perm(role, perm):
-    if isinstance(perm, str):
-        perm = str_to_perm(perm)
     if isinstance(role, int):
-        role = models.Role.objects.get(pk=role)
-    return role.perms.filter(pk=perm.pk).exists()
+        return Permission.objects.filter(roles__pk=role) \
+            .filter(**get_perm_filter(perm)) \
+            .exists()
+    return role.perms \
+        .filter(**get_perm_filter(perm)) \
+        .exists()

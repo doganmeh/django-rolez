@@ -31,9 +31,12 @@ class UserRoleMixin(object):
         else:
             perms = super_(obj)
             perms_role_added = set(perms)
+            app_name, _ = settings.ROLE_MODEL.split('.')
             for perm in perms:
-                if perm[:perm.index('.')] == 'rolez':
-                    perms_role_added.update(get_perms_from_delegate(perm))
+                if perm[:perm.index('.')] == app_name:
+                    perm = str_to_perm(perm)
+                    if hasattr(perm, 'role'):
+                        perms_role_added.update(get_perms_from_delegate(perm))
                     # todo: this will make n trips to the db
         setattr(self, cache_name, perms_role_added)
         return perms_role_added

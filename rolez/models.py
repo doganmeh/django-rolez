@@ -1,11 +1,7 @@
 import re
-from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Permission
 from django.contrib.contenttypes.models import ContentType
 from django.db import models
-
-UserModel = get_user_model()
-
 
 class AbstractRole(models.Model):
     name = models.CharField(
@@ -39,5 +35,3 @@ class AbstractRole(models.Model):
         abstract = True
 
 
-class Role(AbstractRole):
-    pass

@@ -1,6 +1,8 @@
 from django.db import models
-from rolez.mixins import UserRoleMixin
 from django.contrib.auth.models import AbstractUser
+
+from rolez.models import AbstractRole
+from rolez.mixins import UserRoleMixin
 
 
 class Blog(models.Model):
@@ -55,4 +57,8 @@ class Entry(models.Model):
 
 
 class RoleUser(UserRoleMixin, AbstractUser):
+    pass
+
+
+class Role(AbstractRole):
     pass

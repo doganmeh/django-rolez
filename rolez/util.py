@@ -1,6 +1,10 @@
+from django.apps import apps
 from django.contrib.auth.models import Permission
+from django.conf import settings
 
-from rolez import models
+
+def get_role_model():
+    return apps.get_model(settings.ROLE_MODEL)
 
 
 def get_cache_key(obj, perm):
@@ -67,7 +71,7 @@ def get_delegates(perm):
 
 
 def test_roles_for_perm(roles, perm):
-    if isinstance(roles[0], models.Role):
+    if isinstance(roles[0], get_role_model()):
         roles = [role.pk for role in roles]
 
     return Permission.objects.filter(roles__pk__in=roles) \

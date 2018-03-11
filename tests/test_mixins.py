@@ -1,17 +1,16 @@
-from rolez.mixins import _has_backend
-
+from django.contrib.contenttypes.models import ContentType
+from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Permission, Group
 from django.test import TestCase as ModelTestCase, override_settings
 
-from rolez.util import clear_cache
-from tests.test_app.models import Author, Blog
-from rolez.models import Role
-from rolez.backend import RoleModelBackend, RoleObjectBackend
-from django.contrib.contenttypes.models import ContentType
-from django.contrib.auth import get_user_model
+from rolez.util import clear_cache, get_role_model
+from rolez.mixins import _has_backend
+
 from guardian.shortcuts import assign_perm
+from tests.test_app.models import Author, Blog
 
 UserModel = get_user_model()
+Role = get_role_model()
 
 
 class HasBackendTests(ModelTestCase):
@@ -39,6 +38,12 @@ class HasBackendTests(ModelTestCase):
 
 
 class UserRoleMixinTestsCommon(object):
+    """
+    creates groups, users; assigns users to groups;
+    creates roles; adds perms to roles
+    creates author, blog objects
+    """
+
     def setUp(self):
         self.admins_group = Group.objects.create(name='admins')
         self.users_group = Group.objects.create(name='users')
@@ -71,12 +76,12 @@ class UserRoleMixinTestsCommon(object):
         self.twain_blog = Blog.objects.create(name="twain personal blog")
 
         self.all_perms = {
-            'rolez.add_role',
-            'rolez.change_role',
-            'rolez.delete_role',
-            'rolez.use_role_author',
-            'rolez.use_role_editor',
-            'rolez.use_role_manager',
+            'test_app.add_role',
+            'test_app.change_role',
+            'test_app.delete_role',
+            'test_app.use_role_author',
+            'test_app.use_role_editor',
+            'test_app.use_role_manager',
             'test_app.add_author',
             'test_app.add_blog',
             'test_app.add_entry',
@@ -110,7 +115,8 @@ class UserRoleMixinDefaultBackendTests(UserRoleMixinTestsCommon, ModelTestCase):
 
     def test_user_allow_role_model_perm(self):
         self.brandon.user_permissions.add(self.manager_role.delegate)
-        self.assertIs(self.brandon.has_role_perm('rolez.use_role_manager'), True)  # default backend
+        self.assertIs(self.brandon.has_role_perm('test_app.use_role_manager'), True)
+        # default backend
 
         clear_cache(self.brandon)
         self.assertIs(self.brandon.has_role_perm('test_app.change_author'), True)
@@ -125,24 +131,23 @@ class UserRoleMixinDefaultBackendTests(UserRoleMixinTestsCommon, ModelTestCase):
         clear_cache(self.jack)
         clear_cache(self.brandon)
 
-        self.assertIs(self.jack.has_role_perm('rolez.use_role_editor'), True)  # default backend
+        self.assertIs(self.jack.has_role_perm('test_app.use_role_editor'), True)  # default backend
         self.assertIs(self.jack.has_role_perm('test_app.change_blog'), True)
         self.assertIs(self.jack.has_role_perm('test_app.add_blog'), False)  # not author
 
-        self.assertIs(self.brandon.has_role_perm('rolez.use_role_editor'), False)
+        self.assertIs(self.brandon.has_role_perm('test_app.use_role_editor'), False)
         self.assertIs(self.brandon.has_role_perm('test_app.change_blog'), False)
 
     def test_get_all_permissions(self):
         self.assertEqual(self.brandon.get_all_permissions(), set())
 
-        self.admins_group.permissions.add(
-            self.manager_role.delegate)  # all admins have manager role
+        self.admins_group.permissions.add(self.manager_role.delegate)
+        # all admins have manager role
         clear_cache(self.brandon)
-        self.assertEqual(self.brandon.get_all_permissions(),
-                         {'rolez.use_role_manager'})
+        self.assertEqual(self.brandon.get_all_permissions(), {'test_app.use_role_manager'})
 
         self.assertEqual(self.brandon.get_all_role_perms(),
-                         {'rolez.use_role_manager', 'test_app.change_author',
+                         {'test_app.use_role_manager', 'test_app.change_author',
                           'test_app.delete_author'})
 
         # will approve perms in roles only
@@ -150,13 +155,13 @@ class UserRoleMixinDefaultBackendTests(UserRoleMixinTestsCommon, ModelTestCase):
         self.brandon.user_permissions.add(self.add_blog)
         clear_cache(self.brandon)
         self.assertEqual(self.brandon.get_all_permissions(),
-                         {'rolez.use_role_manager', 'test_app.add_blog'})
+                         {'test_app.use_role_manager', 'test_app.add_blog'})
 
         # brandon wants the entire role
         self.brandon.user_permissions.add(self.author_role.delegate)
         clear_cache(self.brandon)
         self.assertEqual(self.brandon.get_all_role_perms(),
-                         {'rolez.use_role_manager', 'rolez.use_role_author',
+                         {'test_app.use_role_manager', 'test_app.use_role_author',
                           'test_app.change_author', 'test_app.delete_author',
                           'test_app.add_blog', 'test_app.change_blog'})
 
@@ -173,7 +178,8 @@ class UserRoleMixinModelTests(UserRoleMixinTestsCommon, ModelTestCase):
 
     def test_user_allow_role_model_perm(self):
         self.brandon.user_permissions.add(self.manager_role.delegate)
-        self.assertIs(self.brandon.has_role_perm('rolez.use_role_manager'), True)  # default backend
+        self.assertIs(self.brandon.has_role_perm('test_app.use_role_manager'),
+                      True)  # default backend
 
         clear_cache(self.brandon)
         self.assertIs(self.brandon.has_role_perm('test_app.change_author'), True)
@@ -188,11 +194,11 @@ class UserRoleMixinModelTests(UserRoleMixinTestsCommon, ModelTestCase):
         clear_cache(self.jack)
         clear_cache(self.brandon)
 
-        self.assertIs(self.jack.has_role_perm('rolez.use_role_editor'), True)  # default backend
+        self.assertIs(self.jack.has_role_perm('test_app.use_role_editor'), True)  # default backend
         self.assertIs(self.jack.has_role_perm('test_app.change_blog'), True)
         self.assertIs(self.jack.has_role_perm('test_app.add_blog'), False)  # not author
 
-        self.assertIs(self.brandon.has_role_perm('rolez.use_role_editor'), False)
+        self.assertIs(self.brandon.has_role_perm('test_app.use_role_editor'), False)
         self.assertIs(self.brandon.has_role_perm('test_app.change_blog'), False)
 
     def test_get_all_permissions(self):
@@ -202,11 +208,11 @@ class UserRoleMixinModelTests(UserRoleMixinTestsCommon, ModelTestCase):
             self.manager_role.delegate)  # all admins have manager role
         clear_cache(self.brandon)
         self.assertEqual(self.brandon.get_all_permissions(),
-                         {'rolez.use_role_manager', 'test_app.change_author',
+                         {'test_app.use_role_manager', 'test_app.change_author',
                           'test_app.delete_author'})
 
         self.assertEqual(self.brandon.get_all_role_perms(),
-                         {'rolez.use_role_manager', 'test_app.change_author',
+                         {'test_app.use_role_manager', 'test_app.change_author',
                           'test_app.delete_author'})
 
         # will approve perms in roles only
@@ -214,14 +220,14 @@ class UserRoleMixinModelTests(UserRoleMixinTestsCommon, ModelTestCase):
         self.brandon.user_permissions.add(self.add_blog)
         clear_cache(self.brandon)
         self.assertEqual(self.brandon.get_all_permissions(),
-                         {'rolez.use_role_manager', 'test_app.change_author',
+                         {'test_app.use_role_manager', 'test_app.change_author',
                           'test_app.delete_author', 'test_app.add_blog'})
 
         # brandon wants the entire role
         self.brandon.user_permissions.add(self.author_role.delegate)
         clear_cache(self.brandon)
         self.assertEqual(self.brandon.get_all_permissions(),
-                         {'rolez.use_role_manager', 'rolez.use_role_author',
+                         {'test_app.use_role_manager', 'test_app.use_role_author',
                           'test_app.change_author', 'test_app.delete_author',
                           'test_app.add_blog', 'test_app.change_blog'})
 
@@ -237,7 +243,6 @@ class UserRoleMixinObjectTests(UserRoleMixinTestsCommon, ModelTestCase):
     def setUp(self):
         super().setUp()
 
-
     def test_user_allow_non_role_obj_perm(self):
         self.assertIs(self.brandon.has_role_perm('test_app.change_author', self.twain), False)
         assign_perm(self.change_author, self.brandon, self.twain)
@@ -248,11 +253,11 @@ class UserRoleMixinObjectTests(UserRoleMixinTestsCommon, ModelTestCase):
         assign_perm(self.manager_role.delegate, self.brandon, self.twain)
         clear_cache(self.brandon)
 
-        self.assertIs(self.brandon.has_perm('rolez.use_role_manager', self.twain), True)  # default backend
+        self.assertIs(self.brandon.has_perm('test_app.use_role_manager', self.twain),
+                      True)  # default backend
 
         self.assertIs(self.brandon.has_role_perm('test_app.change_author', self.twain), True)
         self.assertIs(self.jack.has_role_perm('test_app.change_author', self.twain), False)
-
 
     def test_group_deny_non_role_obj_perm(self):
         self.assertEqual(self.jack.groups.all().__len__(), 1)
@@ -260,7 +265,6 @@ class UserRoleMixinObjectTests(UserRoleMixinTestsCommon, ModelTestCase):
 
         assign_perm(self.delete_author, self.admins_group, self.twain)
         self.assertIs(self.brandon.has_role_perm('test_app.delete_author', self.twain), True)
-
 
     def test_group_allow_role_obj_perm(self):
         self.assertIs(self.jack.has_role_perm('test_app.change_blog'), False)
@@ -271,9 +275,10 @@ class UserRoleMixinObjectTests(UserRoleMixinTestsCommon, ModelTestCase):
         clear_cache(self.jack)
         clear_cache(self.brandon)
 
-        self.assertIs(self.jack.has_perm('rolez.use_role_editor', self.twain), True)  # default backend
+        self.assertIs(self.jack.has_perm('test_app.use_role_editor', self.twain),
+                      True)  # default backend
         self.assertIs(self.jack.has_role_perm('test_app.change_blog', self.twain), True)
         self.assertIs(self.jack.has_role_perm('test_app.add_blog', self.twain), False)  # not author
 
-        self.assertIs(self.brandon.has_perm('rolez.use_role_editor', self.twain), False)
+        self.assertIs(self.brandon.has_perm('test_app.use_role_editor', self.twain), False)
         self.assertIs(self.brandon.has_role_perm('test_app.change_blog', self.twain), False)

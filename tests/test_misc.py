@@ -2,14 +2,13 @@ from django.contrib.auth.models import Permission, Group
 from django.db import IntegrityError
 from django.test import TestCase as ModelTestCase, override_settings  # use when querying models
 from unittest import TestCase as NonModelTestCase  # use otherwise
-from rolez.models import Role
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.auth import get_user_model
-from rolez.mixins import _has_backend
-from rolez.util import test_roles_for_perm, test_role_for_perm
+from rolez.util import test_roles_for_perm, test_role_for_perm, get_role_model
 from tests.test_app.models import Author, Blog
 
 UserModel = get_user_model()
+Role = get_role_model()
 
 
 # assert list: https://docs.python.org/3/library/unittest.html#assert-methods:
@@ -54,8 +53,8 @@ class UtilityTests(ModelTestCase):
         self.brandon = UserModel.objects.create(username='brandon')
         self.jack = UserModel.objects.create(username='jack')
 
-        self.jack.groups.add(self.users_group)
         self.brandon.groups.add(self.admins_group)
+        self.jack.groups.add(self.users_group)
 
         self.manager_role = Role.objects.create(name='manager')  # author add, change, delete
         self.editor_role = Role.objects.create(name='editor')  # blog change

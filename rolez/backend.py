@@ -1,7 +1,8 @@
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Permission
 
-from rolez.util import str_to_perm, clear_cache, get_cache_key, perms_to_str, get_delegates
+from rolez.util import str_to_perm, clear_cache, get_cache_key, perms_to_str, get_delegates, \
+    get_roles_perms
 
 
 class RoleModelBackend(object):
@@ -44,6 +45,41 @@ class RoleModelBackend(object):
             user_obj._role_model_cache.update(self.get_user_permissions(user_obj))
             user_obj._role_model_cache.update(self.get_group_permissions(user_obj))
         return user_obj._role_model_cache
+
+    def has_perm(self, user_obj, perm, obj=None):
+        return perm in self.get_all_permissions(user_obj, obj)
+
+    def has_module_perms(self, user_obj, app_label):
+        """
+        Return True if user_obj has any roles with permissions in the given app_label.
+        """
+        for perm in self.get_all_permissions(user_obj):
+            if perm[:perm.index('.')] == app_label:
+                return True
+        return False
+
+
+class RoleListModelBackend(object):
+    """
+    model level permission for the roles list of the user; no groups
+    """
+    def clear_cache(self, user):
+        clear_cache(user)
+
+    def authenticate(self, username, password):
+        return None
+
+    def get_all_permissions(self, user_obj, obj=None):
+        if not user_obj.is_active or user_obj.is_anonymous or obj is not None:
+            return set()
+        perm_cache_name = '_role_list_perm_cache'
+        if not hasattr(user_obj, perm_cache_name):
+            if not hasattr(user_obj, '_role_list'):
+                user_obj._role_list = []
+            perms = get_roles_perms(user_obj._role_list)
+            perms = set(perms_to_str(perms))
+            setattr(user_obj, perm_cache_name, perms)
+        return getattr(user_obj, perm_cache_name)
 
     def has_perm(self, user_obj, perm, obj=None):
         return perm in self.get_all_permissions(user_obj, obj)

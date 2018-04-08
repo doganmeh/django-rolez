@@ -74,9 +74,9 @@ class RoleListModelBackend(object):
             return set()
         perm_cache_name = '_role_list_perm_cache'
         if not hasattr(user_obj, perm_cache_name):
-            if not hasattr(user_obj, '_role_list'):
-                user_obj._role_list = []
-            perms = get_roles_perms(user_obj._role_list)
+            if not hasattr(user_obj, 'role_list'):
+                user_obj.role_list = []
+            perms = get_roles_perms(user_obj.role_list)
             perms = set(perms_to_str(perms))
             setattr(user_obj, perm_cache_name, perms)
         return getattr(user_obj, perm_cache_name)

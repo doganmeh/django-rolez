@@ -25,7 +25,7 @@ class AbstractRole(models.Model):
                 content_type=ctype,
                 codename=self.codename(),
             )
-            super().save(**kwargs)
+        super().save(**kwargs)
 
     def delete(self, **kwargs):
         super().delete(**kwargs)

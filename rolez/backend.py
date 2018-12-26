@@ -72,11 +72,11 @@ class RoleListModelBackend(object):
     def get_all_permissions(self, user_obj, obj=None):
         if not user_obj.is_active or user_obj.is_anonymous or obj is not None:
             return set()
-        perm_cache_name = '_role_list_perm_cache'
+        perm_cache_name = '_roles_perm_cache'
         if not hasattr(user_obj, perm_cache_name):
-            if not hasattr(user_obj, 'role_list'):
-                raise ValueError ('role_list not found on user.')
-            perms = get_roles_perms(user_obj.role_list)
+            if not hasattr(user_obj, 'roles'):
+                raise ValueError ('roles not found on user.')
+            perms = get_roles_perms(user_obj.roles)
             perms = set(perms_to_str(perms))
             setattr(user_obj, perm_cache_name, perms)
         return getattr(user_obj, perm_cache_name)

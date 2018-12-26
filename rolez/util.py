@@ -18,7 +18,7 @@ def clear_cache(user):
     if hasattr(user, '_role_model_cache'): del user._role_model_cache
 
     # role list model backend
-    if hasattr(user, '_role_list_perm_cache'): del user._role_list_perm_cache
+    if hasattr(user, '_roles_perm_cache'): del user._roles_perm_cache
 
     # role object backend
     if hasattr(user, '_role_obj_cache'): del user._role_obj_cache

@@ -12,7 +12,7 @@ class AbstractRole(models.Model):
     )
     delegate = models.OneToOneField(Permission, on_delete=models.CASCADE,
                                     related_name='role')
-    perms = models.ManyToManyField(Permission, related_name='roles')
+    perms = models.ManyToManyField(Permission, related_name='roles', blank=True)
 
     def codename(self):
         return 'use_role_' + re.sub(r'([^\s\w]|_)+', '', self.name).replace(' ', '_') \
